@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Silent-install app</string>
+    <string name="accessibility_service_description">This service automatically clicks Install and Done buttons during APK installation to enable silent installation. No data is collected or shared.</string>
+</resources>
