@@ -199,9 +199,6 @@ object DeviceAdminUtils {
 
         try {
             val devicePolicyManager = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-            val adminComponent = getAdminComponentName(context)
-
-            // Clear device owner
             devicePolicyManager.clearDeviceOwnerApp(context.packageName)
             Log.d(TAG, "Device Owner removed successfully")
             return true
@@ -214,8 +211,7 @@ object DeviceAdminUtils {
     /**
      * Get instructions for removing Device Owner
      */
-    fun getDeviceOwnerRemovalInstructions(): String {
-        return """
+    val deviceOwnerRemovalInstructions = """
             To remove Device Owner and restore normal functionality:
 
             Method 1: Via ADB (Recommended)
@@ -231,7 +227,6 @@ object DeviceAdminUtils {
 
             After removal, the uninstall button will appear again.
         """.trimIndent()
-    }
 
     /**
      * Check if app can be uninstalled (blocked by Device Owner)

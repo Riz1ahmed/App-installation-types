@@ -120,7 +120,7 @@ object Dialogs {
     fun showDeviceOwnerRemovalInstructions(context: Context) {
         AlertDialog.Builder(context)
             .setTitle("Remove Device Owner")
-            .setMessage(DeviceAdminUtils.getDeviceOwnerRemovalInstructions())
+            .setMessage(DeviceAdminUtils.deviceOwnerRemovalInstructions)
             .setPositiveButton("OK", null)
             .show()
     }

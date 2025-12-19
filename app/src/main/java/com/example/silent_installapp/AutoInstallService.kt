@@ -19,7 +19,8 @@ class AutoInstallService : AccessibilityService() {
         val info = AccessibilityServiceInfo().apply {
             eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
-            flags = AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+            flags =
+                AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
             notificationTimeout = 100
             packageNames = arrayOf(
                 "com.google.android.packageinstaller",
@@ -55,24 +56,28 @@ class AutoInstallService : AccessibilityService() {
 
         try {
             // Try to find and click various install-related buttons
-            val clicked = clickButtonByText(rootNode, "Install") ||
-                    clickButtonByText(rootNode, "INSTALL") ||
-                    clickButtonByText(rootNode, "Continue") ||
-                    clickButtonByText(rootNode, "CONTINUE") ||
-                    clickButtonByText(rootNode, "Update") ||
-                    clickButtonByText(rootNode, "UPDATE") ||
-                    clickButtonByText(rootNode, "Next") ||
-                    clickButtonByText(rootNode, "NEXT") ||
-                    clickButtonByText(rootNode, "Done") ||
-                    clickButtonByText(rootNode, "DONE") ||
-                    clickButtonByText(rootNode, "Open") ||
-                    clickButtonByText(rootNode, "OPEN") ||
-                    clickButtonById(rootNode, "install") ||
-                    clickButtonById(rootNode, "continue_button") ||
-                    clickButtonById(rootNode, "done_button")
+            val clicked =
+                clickButtonByText(rootNode, "Setup") ||
+                clickButtonByText(rootNode, "Install") ||
+                clickButtonByText(rootNode, "INSTALL") ||
+                clickButtonByText(rootNode, "Continue") ||
+                clickButtonByText(rootNode, "CONTINUE") ||
+                clickButtonByText(rootNode, "Update") ||
+                clickButtonByText(rootNode, "UPDATE") ||
+                //clickButtonByText(rootNode, "Next") ||
+                //clickButtonByText(rootNode, "NEXT") ||
+                //clickButtonByText(rootNode, "Done") ||
+                //clickButtonByText(rootNode, "DONE") ||
+                //clickButtonByText(rootNode, "Open") ||
+                //clickButtonByText(rootNode, "OPEN") ||
+                clickButtonById(rootNode, "install") ||
+                clickButtonById(rootNode, "continue_button") ||
+                clickButtonById(rootNode, "done_button")
 
             if (clicked) {
                 Log.d(TAG, "Successfully clicked installation button")
+            } else {
+                Log.d(TAG, "No installation button found to click")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error handling installation window", e)

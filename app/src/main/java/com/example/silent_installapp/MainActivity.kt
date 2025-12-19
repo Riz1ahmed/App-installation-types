@@ -71,10 +71,7 @@ class MainActivity : AppCompatActivity() {
         Dialogs.showRemoveDeviceOwnerDialog(this) { action ->
             when (action) {
                 DeviceOwnerAction.REMOVE -> removeDeviceOwnerPrivileges()
-                DeviceOwnerAction.SHOW_INSTRUCTIONS -> Dialogs.showDeviceOwnerRemovalInstructions(
-                    this
-                )
-
+                DeviceOwnerAction.SHOW_INSTRUCTIONS -> Dialogs.showDeviceOwnerRemovalInstructions(this)
                 DeviceOwnerAction.CANCEL -> { /* Do nothing */
                 }
             }
@@ -143,7 +140,7 @@ class MainActivity : AppCompatActivity() {
 
         // Accessibility service is enabled, proceed with installation
         progressBar.visibility = ProgressBar.VISIBLE
-        statusText.text = "Installing silently..."
+        statusText.text = "Installing by auto click..."
 
         installerService.installSilentlyByAutoClick(apkPath) { success, message ->
             progressBar.visibility = ProgressBar.GONE
