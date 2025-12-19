@@ -1,6 +1,5 @@
 package com.example.silent_installapp
 
-import android.app.admin.DeviceAdminReceiver
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
@@ -36,7 +35,7 @@ object DeviceAdminUtils {
      */
     fun requestDeviceAdmin(context: Context) {
         if (isDeviceAdmin(context)) {
-            Toast.makeText(context, "Device Admin already enabled", Toast.LENGTH_SHORT).show()
+            context.showToast("Device Admin already enabled")
             return
         }
         val componentName = ComponentName(context, SilentInstallAdminReceiver::class.java)
@@ -67,7 +66,17 @@ object DeviceAdminUtils {
         onComplete: (Boolean, String) -> Unit
     ) {
         if (!isDeviceOwner(context)) {
-            onComplete(false, "Device Owner privileges required for true silent installation.\n\nDevice Admin alone CANNOT do silent install.\n\nPlease either:\n1. Set up Device Owner via ADB\n2. Use 'By Auto Click' method instead")
+            onComplete(
+                false,
+                "Device Owner privileges required for true silent installation.\n\n" +
+                    "Device Admin alone CANNOT do silent install.\n\n" +
+                    "To set up Device Owner via ADB:\n" +
+                    "1. Go to Settings → System → Multiple users\n" +
+                    "2. Remove all secondary user accounts (keep only primary)\n" +
+                    "3. Then run: adb shell dpm set-device-owner " +
+                    "com.example.silent_installapp/.SilentInstallAdminReceiver\n\n" +
+                    "Alternatively, use 'By Auto Click' method."
+            )
             return
         }
 
@@ -135,7 +144,10 @@ object DeviceAdminUtils {
             Log.d(TAG, "Installation session committed")
 
             // Note: System will still show confirmation dialog
-            onComplete(true, "Installation initiated - system confirmation may appear.\n\nFor true silent install, use 'By Auto Click' method.")
+            onComplete(
+                true,
+                "Installation initiated - system confirmation may appear.\n\nFor true silent install, use 'By Auto Click' method."
+            )
 
         } catch (e: Exception) {
             Log.e(TAG, "Installation error: ${e.message}", e)
@@ -147,24 +159,33 @@ object DeviceAdminUtils {
     /**
      * Instructions for setting up device owner via ADB
      */
-    fun getDeviceOwnerSetupInstructions(): String {
-        return """
-            To enable TRUE silent installation (like Play Store), you need Device Owner privileges:
-            
-            Method 1: ADB Command (Recommended for testing)
+    val enableDeviceAdminInstruction = """
+            To enable silent installation (like Play Store), you need Device Owner privileges:
+
+            ⚠️  IMPORTANT REQUIREMENTS:
+            • Device must be factory reset (no accounts, single user only)
+            • No multiple user accounts can exist on device
+            • USB Debugging must be enabled
+            • ADB must be able to access device
+
+            Method 1️⃣: ADB Command (Recommended for testing)
             1. Enable USB debugging on your device
             2. Connect device to PC via USB
             3. Open command prompt/terminal
             4. Run: adb shell dpm set-device-owner com.example.silent_installapp/.SilentInstallAdminReceiver
-            
-            Method 2: Device Admin (Limited - requires user confirmation)
+
+            If you get "multiple users" error:
+            1. Go to Settings → System → Multiple users
+            2. Remove all secondary user accounts (keep only primary user)
+            3. Then run the ADB command above
+
+            Method 2️⃣: Device Admin (Limited - requires user confirmation)
             1. Go to Settings → Security → Device Admin
             2. Enable "Silent-install app"
-            
-            Note: Device Owner can only be set on a factory reset device without any accounts.
+
+            ℹ️ Note: Device Owner can only be set on a factory reset device without any accounts.
             For production, consider using MDM (Mobile Device Management) solutions.
         """.trimIndent()
-    }
 
     /**
      * Remove Device Owner privileges
@@ -196,18 +217,18 @@ object DeviceAdminUtils {
     fun getDeviceOwnerRemovalInstructions(): String {
         return """
             To remove Device Owner and restore normal functionality:
-            
+
             Method 1: Via ADB (Recommended)
             1. Connect device to PC via USB
             2. Open command prompt/terminal
             3. Run: adb shell dpm remove-active-admin com.example.silent_installapp/.SilentInstallAdminReceiver
-            
+
             Method 2: From App
             Use the "Remove Device Owner" button in the app
-            
+
             Method 3: Factory Reset (Last resort)
             Settings → System → Reset → Factory data reset
-            
+
             After removal, the uninstall button will appear again.
         """.trimIndent()
     }

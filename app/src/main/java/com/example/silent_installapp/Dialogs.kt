@@ -28,9 +28,7 @@ object Dialogs {
 
         AlertDialog.Builder(context)
             .setTitle(title)
-            .setSingleChoiceItems(options, -1) { _, which ->
-                selectedOption = which
-            }
+            .setSingleChoiceItems(options, -1) { _, which -> selectedOption = which }
             .setPositiveButton("Install") { dialog, _ ->
                 when (selectedOption) {
                     0 -> isConfirmed(InstallationType.SILENT)
@@ -40,10 +38,7 @@ object Dialogs {
                 }
                 dialog.dismiss()
             }
-            .setNegativeButton("Cancel") { dialog, _ ->
-                isConfirmed(InstallationType.CANCEL)
-                dialog.dismiss()
-            }
+            .setNegativeButton("Cancel") { dialog, _ -> isConfirmed(InstallationType.CANCEL) }
             .show()
     }
 
@@ -60,29 +55,23 @@ object Dialogs {
             .setTitle("Enable Accessibility Service")
             .setMessage(
                 "To enable silent installation, you need to enable the Auto Install accessibility service.\n\n" +
-                        "Steps:\n" +
-                        "1. Go to Accessibility Settings\n" +
-                        "2. Find 'Silent-install app'\n" +
-                        "3. Enable the service\n" +
-                        "4. Come back and try again"
+                    "Steps:\n" +
+                    "1. Go to Accessibility Settings\n" +
+                    "2. Find 'Silent-install app'\n" +
+                    "3. Enable the service\n" +
+                    "4. Come back and try again"
             )
             .setPositiveButton("Open Settings") { _, _ -> isConfirmed(true) }
-            .setNegativeButton("Cancel", ) { dialog, _ ->
-                isConfirmed(false)
-                dialog.dismiss()
-            }
+            .setNegativeButton("Cancel") { dialog, _ -> isConfirmed(false) }
             .show()
     }
 
     fun showDeviceAdminDialog(context: Context, isConfirmed: (Boolean) -> Unit) {
         AlertDialog.Builder(context)
             .setTitle("Enable Device Admin")
-            .setMessage(DeviceAdminUtils.getDeviceOwnerSetupInstructions())
+            .setMessage(DeviceAdminUtils.enableDeviceAdminInstruction)
             .setPositiveButton("Enable Device Admin") { _, _ -> isConfirmed(true) }
-            .setNegativeButton("Cancel") { dialog, _ ->
-                isConfirmed(false)
-                dialog.dismiss()
-            }
+            .setNegativeButton("Cancel") { dialog, _ -> isConfirmed(false) }
             .show()
     }
 
@@ -91,20 +80,14 @@ object Dialogs {
             .setTitle("Remove Device Owner?")
             .setMessage(
                 "This will:\n" +
-                "• Restore uninstall button\n" +
-                "• Disable silent installation\n" +
-                "• Remove all Device Owner privileges\n\n" +
-                "You can set it up again later via ADB."
+                    "• Restore uninstall button\n" +
+                    "• Disable silent installation\n" +
+                    "• Remove all Device Owner privileges\n\n" +
+                    "You can set it up again later via ADB."
             )
-            .setPositiveButton("Remove") { _, _ ->
-                onAction(DeviceOwnerAction.REMOVE)
-            }
-            .setNegativeButton("Cancel") { _, _ ->
-                onAction(DeviceOwnerAction.CANCEL)
-            }
-            .setNeutralButton("Instructions") { _, _ ->
-                onAction(DeviceOwnerAction.SHOW_INSTRUCTIONS)
-            }
+            .setPositiveButton("Remove") { _, _ -> onAction(DeviceOwnerAction.REMOVE) }
+            .setNegativeButton("Cancel") { _, _ -> onAction(DeviceOwnerAction.CANCEL) }
+            .setNeutralButton("Instructions") { _, _ -> onAction(DeviceOwnerAction.SHOW_INSTRUCTIONS) }
             .show()
     }
 
@@ -112,9 +95,7 @@ object Dialogs {
         AlertDialog.Builder(context)
             .setTitle("Success")
             .setMessage("Device Owner removed successfully!\n\nYou can now uninstall the app normally.")
-            .setPositiveButton("OK") { _, _ ->
-                onDismiss()
-            }
+            .setPositiveButton("OK") { _, _ -> onDismiss() }
             .show()
     }
 
@@ -124,13 +105,14 @@ object Dialogs {
             .setMessage("Could not remove Device Owner from app.\n\nPlease use ADB command:\n\nadb shell dpm remove-active-admin com.example.silent_installapp/.SilentInstallAdminReceiver")
             .setPositiveButton("OK", null)
             .setNeutralButton("Copy Command") { _, _ ->
-                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                val clipboard =
+                    context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                 val clip = android.content.ClipData.newPlainText(
                     "ADB Command",
                     "adb shell dpm remove-active-admin com.example.silent_installapp/.SilentInstallAdminReceiver"
                 )
                 clipboard.setPrimaryClip(clip)
-                android.widget.Toast.makeText(context, "Command copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
+                context.showToast("Command copied to clipboard")
             }
             .show()
     }
@@ -143,46 +125,35 @@ object Dialogs {
             .show()
     }
 
-    fun showDeviceAdminLimitationDialog(context: Context, onAction: (DeviceAdminLimitationAction) -> Unit) {
+    fun showDeviceAdminLimitationDialog(
+        context: Context,
+        isConfirmed: (Boolean) -> Unit
+    ) {
         AlertDialog.Builder(context)
             .setTitle("Device Admin Limitation")
             .setMessage(
-                "Device Admin alone cannot perform true silent installation.\n\n" +
-                "Options:\n" +
-                "1. Set up Device Owner for TRUE silent install (no confirmation)\n" +
-                "2. Use 'By Auto Click' method (auto-clicks buttons)\n\n" +
-                "Device Owner requires ADB setup on factory reset device."
+                "Device Admin alone cannot perform silent installation.\n\n" +
+                    "Options:\n" +
+                    "1. Set up Device Owner for silent install (no confirmation)\n" +
+                    "2. Use 'By Auto Click' method (auto-clicks buttons)\n\n" +
+                    "Device Owner requires ADB setup on factory reset device."
             )
-            .setPositiveButton("Setup Device Owner") { _, _ ->
-                onAction(DeviceAdminLimitationAction.SETUP_DEVICE_OWNER)
-            }
-            .setNegativeButton("Use Auto Click") { _, _ ->
-                onAction(DeviceAdminLimitationAction.USE_AUTO_CLICK)
-            }
-            .setNeutralButton("Cancel") { _, _ ->
-                onAction(DeviceAdminLimitationAction.CANCEL)
-            }
+            .setNegativeButton("Cancel") { _, _ -> isConfirmed(false) }
+            .setPositiveButton("Setup Device Owner") { _, _ -> isConfirmed(true) }
             .show()
     }
 
-    fun showSilentInstallNotAvailableDialog(context: Context, onAction: (SilentInstallAction) -> Unit) {
+    fun showSilentInstallNotAvailableDialog(
+        context: Context,
+        isConfirmed: (Boolean) -> Unit
+    ) {
         AlertDialog.Builder(context)
             .setTitle("Silent Installation Not Available")
             .setMessage(
-                "True silent installation requires Device Owner privileges.\n\n" +
-                "Choose an option:\n" +
-                "1. Setup Device Owner (TRUE silent - like Play Store)\n" +
-                "2. Use Auto Click method (requires Accessibility Service)"
+                "Silent installation requires Device Owner privileges. Please enable Device Owner for silent installs without user interaction."
             )
-            .setPositiveButton("Setup Device Owner") { _, _ ->
-                onAction(SilentInstallAction.SETUP_DEVICE_OWNER)
-            }
-            .setNegativeButton("Use Auto Click") { _, _ ->
-                onAction(SilentInstallAction.USE_AUTO_CLICK)
-            }
-            .setNeutralButton("Cancel") { _, _ ->
-                onAction(SilentInstallAction.CANCEL)
-            }
+            .setNegativeButton("Cancel") { _, _ -> isConfirmed(false) }
+            .setPositiveButton("Setup Device Owner") { _, _ -> isConfirmed(true) }
             .show()
     }
 }
@@ -202,7 +173,6 @@ enum class DeviceOwnerAction {
 
 enum class DeviceAdminLimitationAction {
     SETUP_DEVICE_OWNER,
-    USE_AUTO_CLICK,
     CANCEL
 }
 

@@ -67,3 +67,7 @@ fun cleanupTempApkFiles(context: Context) {
         e.printStackTrace()
     }
 }
+
+fun Context.showToast(msg: String) {
+    android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_LONG).show()
+}

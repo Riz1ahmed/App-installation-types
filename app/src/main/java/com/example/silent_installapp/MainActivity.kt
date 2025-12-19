@@ -110,33 +110,19 @@ class MainActivity : AppCompatActivity() {
             }
         } else if (DeviceAdminUtils.isDeviceAdmin(this)) {
             // Device Admin alone cannot do silent install, show explanation
-            Dialogs.showDeviceAdminLimitationDialog(this) { action ->
-                when (action) {
-                    DeviceAdminLimitationAction.SETUP_DEVICE_OWNER -> {
-                        Dialogs.showDeviceAdminDialog(this) { enableDeviceAdmin ->
-                            if (enableDeviceAdmin) DeviceAdminUtils.requestDeviceAdmin(this)
-                        }
-                    }
-
-                    DeviceAdminLimitationAction.USE_AUTO_CLICK -> installByAutoClick(apkPath)
-                    DeviceAdminLimitationAction.CANCEL -> { /* Do nothing */
-                    }
+            Dialogs.showDeviceAdminLimitationDialog(this) { isConfirmed ->
+                Log.d(TAG, "Device Admin limitation dialog result: $isConfirmed")
+                if (isConfirmed) Dialogs.showDeviceAdminDialog(this) { isOk ->
+                    if (isOk) DeviceAdminUtils.requestDeviceAdmin(this)
                 }
+
             }
         } else {
             // No silent installation method available, show options
-            Dialogs.showSilentInstallNotAvailableDialog(this) { action ->
-                when (action) {
-                    SilentInstallAction.SETUP_DEVICE_OWNER -> {
-                        Dialogs.showDeviceAdminDialog(this) { enableDeviceAdmin ->
-                            if (enableDeviceAdmin) {
-                                DeviceAdminUtils.requestDeviceAdmin(this)
-                            }
-                        }
-                    }
-
-                    SilentInstallAction.USE_AUTO_CLICK -> installByAutoClick(apkPath)
-                    SilentInstallAction.CANCEL -> { /* Do nothing */
+            Dialogs.showSilentInstallNotAvailableDialog(this) { isConfirmed ->
+                if (isConfirmed) Dialogs.showDeviceAdminDialog(this) { enableDeviceAdmin ->
+                    if (enableDeviceAdmin) {
+                        DeviceAdminUtils.requestDeviceAdmin(this)
                     }
                 }
             }
@@ -148,11 +134,7 @@ class MainActivity : AppCompatActivity() {
         Log.d(TAG, "Starting silent installation for APK: $apkPath")
 
         // Check if accessibility service is enabled
-        if (!AccessibilityUtils.isAccessibilityServiceEnabled(
-                this,
-                AutoInstallService::class.java
-            )
-        ) {
+        if (!AccessibilityUtils.isAccessibilityServiceEnabled(this, AutoInstallService::class.java)) {
             Dialogs.showAccessibilityServiceDialog(this) { isConfirmed ->
                 if (isConfirmed) AccessibilityUtils.openAccessibilitySettings(this)
             }
@@ -186,7 +168,7 @@ class MainActivity : AppCompatActivity() {
 
 
     companion object {
-        const val TAG = "MainActivity"
+        const val TAG = "MainActivity1"
         const val APK_MIME_TYPE = "application/vnd.android.package-archive"
     }
 }
