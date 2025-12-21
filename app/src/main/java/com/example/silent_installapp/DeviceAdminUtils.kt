@@ -50,6 +50,70 @@ object DeviceAdminUtils {
     }
 
     /**
+     * Attempt to set Device Owner programmatically (on rooted devices)
+     * This method requires root access and will use shell commands
+     */
+    fun setDeviceOwnerViaShell(context: Context): Boolean {
+        return try {
+            val componentName = "com.example.silent_installapp/.SilentInstallAdminReceiver"
+            val command = "dpm set-device-owner $componentName"
+
+            Log.d(TAG, "Attempting to set device owner via shell: $command")
+
+            // Try with su (root)
+            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", command))
+            val exitCode = process.waitFor()
+
+            if (exitCode == 0) {
+                Log.d(TAG, "Device Owner set successfully via shell")
+                return true
+            } else {
+                Log.w(TAG, "Shell command failed with exit code: $exitCode")
+                // Read error output
+                val errorStream = process.errorStream.bufferedReader().use { it.readText() }
+                Log.w(TAG, "Error output: $errorStream")
+                return false
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to set device owner via shell: ${e.message}", e)
+            false
+        }
+    }
+
+    /**
+     * Attempt to enable Device Owner on rooted device without PC
+     * Shows step-by-step instructions
+     */
+    fun enableDeviceOwnerOnDevice(context: Context, onResult: (Boolean, String) -> Unit) {
+        Thread {
+            try {
+                // First check if already Device Owner
+                if (isDeviceOwner(context)) {
+                    onResult(true, "✓ Already Device Owner")
+                    return@Thread
+                }
+
+                // Step 1: Enable Device Admin first
+                if (!isDeviceAdmin(context)) {
+                    onResult(false, "⚠️ First enable Device Admin in settings, then try again")
+                    return@Thread
+                }
+
+                // Step 2: Attempt to set Device Owner via shell (requires root)
+                val success = setDeviceOwnerViaShell(context)
+
+                if (success) {
+                    onResult(true, "✓ Device Owner enabled successfully!")
+                } else {
+                    onResult(false, "✗ Failed - Device requires root access.\n\nUse Termux method instead (see instructions)")
+                }
+            } catch (e: Exception) {
+                onResult(false, "✗ Error: ${e.message}")
+            }
+        }.start()
+    }
+
+    /**
      * Get device admin component name
      */
     fun getAdminComponentName(context: Context): ComponentName {
@@ -168,22 +232,46 @@ object DeviceAdminUtils {
             • USB Debugging must be enabled
             • ADB must be able to access device
 
-            Method 1️⃣: ADB Command (Recommended for testing)
-            1. Enable USB debugging on your device
-            2. Connect device to PC via USB
-            3. Open command prompt/terminal
-            4. Run: adb shell dpm set-device-owner com.example.silent_installapp/.SilentInstallAdminReceiver
+            ═══════════════════════════════════════════════════════════════
+            METHOD 1️⃣: FROM APP (If device is rooted)
+            ═══════════════════════════════════════════════════════════════
+            1. Tap "Enable Device Admin" button first
+            2. Grant Device Admin permission when prompted
+            3. Tap "Set Device Owner" button (on this app)
+            4. App will attempt to enable Device Owner using root access
+
+            If this fails → your device needs root or use Method 2
+
+            ═══════════════════════════════════════════════════════════════
+            METHOD 2️⃣: VIA TERMUX (Works on any device, no root needed)
+            ═══════════════════════════════════════════════════════════════
+            1. Install Termux from F-Droid (https://f-droid.org)
+            2. Open Termux and run:
+               apt install android-tools
+               adb connect localhost:5037
+               adb shell dpm set-device-owner com.example.silent_installapp/.SilentInstallAdminReceiver
 
             If you get "multiple users" error:
             1. Go to Settings → System → Multiple users
             2. Remove all secondary user accounts (keep only primary user)
             3. Then run the ADB command above
 
-            Method 2️⃣: Device Admin (Limited - requires user confirmation)
+            ═══════════════════════════════════════════════════════════════
+            METHOD 3️⃣: ADB Command via PC (Most reliable)
+            ═══════════════════════════════════════════════════════════════
+            1. Enable USB debugging on your device
+            2. Connect device to PC via USB
+            3. Open command prompt/terminal on PC
+            4. Run: adb shell dpm set-device-owner com.example.silent_installapp/.SilentInstallAdminReceiver
+
+            ═══════════════════════════════════════════════════════════════
+            METHOD 4️⃣: Device Admin (Limited - requires user confirmation)
+            ═══════════════════════════════════════════════════════════════
             1. Go to Settings → Security → Device Admin
             2. Enable "Silent-install app"
+            ⚠️ Note: Device Admin alone CANNOT do true silent installation
 
-            ℹ️ Note: Device Owner can only be set on a factory reset device without any accounts.
+            ℹ️ Device Owner can only be set on a factory reset device without any accounts.
             For production, consider using MDM (Mobile Device Management) solutions.
         """.trimIndent()
 

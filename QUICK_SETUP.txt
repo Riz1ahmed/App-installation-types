@@ -1,0 +1,57 @@
+# ⚡ Quick Setup: Device Owner From Device (No PC)
+
+## 🚀 FASTEST METHOD: Termux (5 minutes)
+
+### Install & Run:
+```
+1. Install Termux from F-Droid
+2. Open Termux, paste this:
+   apt update && apt install android-tools && adb connect localhost:5037 && adb shell dpm set-device-owner com.example.silent_installapp/.SilentInstallAdminReceiver
+3. Done! ✓
+```
+
+---
+
+## 🔥 IF DEVICE IS ROOTED: Built-in App Button
+
+```
+1. Tap "Enable Device Admin" button in app
+2. Tap "Set Device Owner" button in app
+3. Done! ✓
+```
+
+---
+
+## ⚙️ TROUBLESHOOTING
+
+**Error: "Multiple users on device"**
+- Settings → System → Multiple users
+- Remove all secondary users
+- Try again
+
+**"Permission denied" in Termux**
+- Run: `su` first, then the dpm command
+
+**"Device owner already set"**
+- Run: `adb shell dpm remove-active-admin com.example.silent_installapp/.SilentInstallAdminReceiver`
+- Then set it again
+
+---
+
+## ✅ VERIFY IT WORKED
+
+```bash
+adb shell dpm get-device-owner
+```
+
+Should show:
+```
+Device owner: com.example.silent_installapp/...
+```
+
+In app: "Device Owner Active ⚠️ Uninstall blocked" status
+
+---
+
+**See DEVICE_OWNER_NO_PC.md for full details**
+
