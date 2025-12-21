@@ -115,3 +115,4 @@ release.properties
 
 # NDK
 obj/
+/.idea/
