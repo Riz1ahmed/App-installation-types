@@ -114,6 +114,118 @@ object DeviceAdminUtils {
     }
 
     /**
+     * NEW METHOD: Enable Device Owner via wireless ADB (like you did in Termux)
+     * This method executes the ADB command directly from the app
+     * Requires: Wireless debugging enabled, android-tools installed
+     */
+    suspend fun enableDeviceOwnerViaWirelessAdb(
+        context: Context,
+        ipAddress: String? = null,
+        port: Int? = null
+    ): Result<String> {
+        return try {
+            // First check if already Device Owner
+            if (isDeviceOwner(context)) {
+                return Result.success("✓ Already Device Owner")
+            }
+
+            // Check if Device Admin is enabled first
+            if (!isDeviceAdmin(context)) {
+                return Result.failure(Exception("⚠️ First enable Device Admin, then try again"))
+            }
+
+            // Use the AdbWirelessUtils to set device owner
+            AdbWirelessUtils.setupDeviceOwnerViaWirelessAdb(context, ipAddress, port)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error enabling device owner via wireless ADB: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * SIMPLIFIED METHOD: Use this if you already connected via wireless debugging
+     * This is equivalent to just running: adb shell dpm set-device-owner ...
+     */
+    suspend fun enableDeviceOwnerViaAdb(context: Context): Result<String> {
+        return try {
+            if (isDeviceOwner(context)) {
+                return Result.success("✓ Already Device Owner")
+            }
+
+            if (!isDeviceAdmin(context)) {
+                return Result.failure(Exception("⚠️ First enable Device Admin, then try again"))
+            }
+
+            // Just run the ADB command directly
+            AdbWirelessUtils.setDeviceOwnerViaAdb(context)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error enabling device owner via ADB: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Enable Device Owner via wireless debugging (no PC needed)
+     * Requires: Wireless debugging enabled + pairing done
+     */
+    fun setDeviceOwnerViaWirelessAdb(
+        context: Context,
+        adbHost: String = "localhost",
+        adbPort: Int = 5555,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        Thread {
+            try {
+                val componentName = "com.example.silent_installapp/.SilentInstallAdminReceiver"
+
+                // Connect to ADB server
+                val connectCommand = "adb connect $adbHost:$adbPort"
+                val setOwnerCommand = "adb shell dpm set-device-owner $componentName"
+
+                Log.d(TAG, "Connecting to ADB: $connectCommand")
+
+                // Execute connect command
+                val connectProcess = Runtime.getRuntime().exec(connectCommand)
+                val connectResult = connectProcess.inputStream.bufferedReader().use { it.readText() }
+                connectProcess.waitFor()
+
+                Log.d(TAG, "Connect result: $connectResult")
+
+                if (connectResult.contains("connected") || connectResult.contains("already connected")) {
+                    // Execute set-device-owner command
+                    Log.d(TAG, "Setting device owner: $setOwnerCommand")
+                    val ownerProcess = Runtime.getRuntime().exec(setOwnerCommand)
+                    val ownerResult = ownerProcess.inputStream.bufferedReader().use { it.readText() }
+                    val ownerError = ownerProcess.errorStream.bufferedReader().use { it.readText() }
+                    ownerProcess.waitFor()
+
+                    Log.d(TAG, "Owner result: $ownerResult")
+                    Log.d(TAG, "Owner error: $ownerError")
+
+                    if (ownerResult.contains("Success") || isDeviceOwner(context)) {
+                        onResult(true, "✓ Device Owner enabled successfully!")
+                    } else {
+                        onResult(false, "✗ Failed: $ownerError")
+                    }
+                } else {
+                    onResult(false, "✗ Failed to connect to ADB: $connectResult")
+                }
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Wireless ADB error: ${e.message}", e)
+                onResult(false, "✗ Error: ${e.message}\n\nMake sure ADB tools are available.")
+            }
+        }.start()
+    }
+
+    /**
+     * Check if wireless debugging is available on this device
+     */
+    fun isWirelessDebuggingAvailable(): Boolean {
+        return android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R // Android 11+
+    }
+
+    /**
      * Get device admin component name
      */
     fun getAdminComponentName(context: Context): ComponentName {
@@ -229,32 +341,37 @@ object DeviceAdminUtils {
             ⚠️  IMPORTANT REQUIREMENTS:
             • Device must be factory reset (no accounts, single user only)
             • No multiple user accounts can exist on device
-            • USB Debugging must be enabled
-            • ADB must be able to access device
+            • Wireless Debugging OR USB Debugging must be enabled
 
             ═══════════════════════════════════════════════════════════════
-            METHOD 1️⃣: FROM APP (If device is rooted)
+            METHOD 1️⃣: FROM APP VIA WIRELESS DEBUGGING (Recommended - No PC!)
+            ═══════════════════════════════════════════════════════════════
+            One-Time Setup (in Termux):
+            1. Install Termux from F-Droid (https://f-droid.org)
+            2. In Termux, run: pkg install android-tools
+            3. Enable Wireless Debugging in Settings → Developer Options
+            4. In Termux, run: adb connect localhost:5037
+               (This connects ADB to your device)
+
+            Using THIS APP (every time you need Device Owner):
+            1. Make sure Wireless Debugging is ON
+            2. In THIS APP, tap "Enable Device Admin" first
+            3. Then tap "Set via Wireless ADB" button
+            4. Done! The app will run: adb shell dpm set-device-owner
+
+            ✅ No need to open Termux again - the app does it for you!
+
+            Alternative (If you already ran adb connect in Termux):
+            • Just open THIS APP and tap "Set via Wireless ADB"
+            • The app will reuse the existing ADB connection
+
+            ═══════════════════════════════════════════════════════════════
+            METHOD 2️⃣: FROM APP (If device is rooted)
             ═══════════════════════════════════════════════════════════════
             1. Tap "Enable Device Admin" button first
             2. Grant Device Admin permission when prompted
             3. Tap "Set Device Owner" button (on this app)
             4. App will attempt to enable Device Owner using root access
-
-            If this fails → your device needs root or use Method 2
-
-            ═══════════════════════════════════════════════════════════════
-            METHOD 2️⃣: VIA TERMUX (Works on any device, no root needed)
-            ═══════════════════════════════════════════════════════════════
-            1. Install Termux from F-Droid (https://f-droid.org)
-            2. Open Termux and run:
-               apt install android-tools
-               adb connect localhost:5037
-               adb shell dpm set-device-owner com.example.silent_installapp/.SilentInstallAdminReceiver
-
-            If you get "multiple users" error:
-            1. Go to Settings → System → Multiple users
-            2. Remove all secondary user accounts (keep only primary user)
-            3. Then run the ADB command above
 
             ═══════════════════════════════════════════════════════════════
             METHOD 3️⃣: ADB Command via PC (Most reliable)
@@ -265,14 +382,16 @@ object DeviceAdminUtils {
             4. Run: adb shell dpm set-device-owner com.example.silent_installapp/.SilentInstallAdminReceiver
 
             ═══════════════════════════════════════════════════════════════
-            METHOD 4️⃣: Device Admin (Limited - requires user confirmation)
+            TROUBLESHOOTING:
             ═══════════════════════════════════════════════════════════════
-            1. Go to Settings → Security → Device Admin
-            2. Enable "Silent-install app"
-            ⚠️ Note: Device Admin alone CANNOT do true silent installation
+            ❌ "Not allowed to set the device owner because there are already several users"
+            → Go to Settings → System → Multiple users → Remove all secondary users
+
+            ❌ "Not allowed to set the device owner because there are already some accounts"
+            → Go to Settings → Accounts → Remove all accounts (Google, etc.)
+            → Or factory reset device
 
             ℹ️ Device Owner can only be set on a factory reset device without any accounts.
-            For production, consider using MDM (Mobile Device Management) solutions.
         """.trimIndent()
 
     /**

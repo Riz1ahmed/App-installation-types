@@ -10,6 +10,11 @@ import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.example.silent_installapp.Dialogs.showErrorDialog
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @SuppressLint("ObsoleteSdkInt")
 class MainActivity : AppCompatActivity() {
@@ -18,6 +23,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var removeDeviceOwnerButton: Button
     private lateinit var progressBar: ProgressBar
     private lateinit var statusText: TextView
+    private lateinit var setupDeviceOwnerButton: Button
     private lateinit var installerService: ApkInstallerService
 
     // Modern Activity Result API
@@ -45,6 +51,7 @@ class MainActivity : AppCompatActivity() {
 
         selectButton = findViewById(R.id.selectButton)
         removeDeviceOwnerButton = findViewById(R.id.removeDeviceOwnerButton)
+        setupDeviceOwnerButton = findViewById(R.id.setupDeviceOwnerButton)
         progressBar = findViewById(R.id.progressBar)
         statusText = findViewById(R.id.statusText)
 
@@ -53,6 +60,9 @@ class MainActivity : AppCompatActivity() {
         // Setup remove device owner button
         removeDeviceOwnerButton.setOnClickListener { showRemoveDeviceOwnerDialog() }
 
+        // Setup wireless ADB device owner button
+        setupDeviceOwnerButton.setOnClickListener { showWirelessAdbSetupDialog() }
+
         // Check and show device owner status
         updateDeviceOwnerStatus()
     }
@@ -60,9 +70,11 @@ class MainActivity : AppCompatActivity() {
     private fun updateDeviceOwnerStatus() {
         if (DeviceAdminUtils.isDeviceOwner(this)) {
             removeDeviceOwnerButton.visibility = Button.VISIBLE
+            //setupDeviceOwnerButton.visibility = Button.GONE
             statusText.text = "Device Owner Active\n⚠️ Uninstall blocked"
         } else {
             removeDeviceOwnerButton.visibility = Button.GONE
+            setupDeviceOwnerButton.visibility = Button.VISIBLE
             statusText.text = "Ready"
         }
     }
@@ -86,6 +98,70 @@ class MainActivity : AppCompatActivity() {
             }
         } else {
             Dialogs.showDeviceOwnerRemovalFailed(this)
+        }
+    }
+
+    private fun showWirelessAdbSetupDialog() {
+        Dialogs.showWirelessAdbSetupDialog(this) { action ->
+            when (action) {
+                WirelessAdbAction.SET_DEVICE_OWNER -> {
+                    // Check if Device Admin is enabled first
+                    if (!DeviceAdminUtils.isDeviceAdmin(this)) {
+                        Dialogs.showErrorDialog(this, "⚠️ Please enable Device Admin first")
+                        //DeviceAdminUtils.requestDeviceAdmin(this)
+                        return@showWirelessAdbSetupDialog
+                    }
+                    setupDeviceOwnerViaWirelessAdb()
+                }
+
+                WirelessAdbAction.SHOW_INSTRUCTIONS -> {
+                    Dialogs.showDeviceAdminDialog(this) { enableDeviceAdmin ->
+                        if (enableDeviceAdmin) DeviceAdminUtils.requestDeviceAdmin(this)
+
+
+                    }
+                }
+
+                WirelessAdbAction.CANCEL -> {
+                    // Do nothing
+                }
+            }
+        }
+    }
+
+    private fun setupDeviceOwnerViaWirelessAdb() {
+        val progressDialog = Dialogs.showWirelessAdbProgress(this)
+
+        CoroutineScope(Dispatchers.Main).launch {
+            delay(1000) // Small delay to ensure dialog is shown
+
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    DeviceAdminUtils.enableDeviceOwnerViaAdb(this@MainActivity)
+                }
+
+                progressDialog.dismiss()
+
+                result.fold(
+                    onSuccess = { message ->
+                        Dialogs.showWirelessAdbResult(this@MainActivity, true, message) {
+                            updateDeviceOwnerStatus()
+                        }
+                    },
+                    onFailure = { exception ->
+                        val errorMessage = exception.message ?: "Unknown error"
+                        Dialogs.showWirelessAdbResult(this@MainActivity, false, errorMessage)
+                    }
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+                progressDialog.dismiss()
+                Dialogs.showWirelessAdbResult(
+                    this@MainActivity,
+                    false,
+                    "Error: ${e.message}\n\nMake sure:\n1. Wireless debugging is ON\n2. You ran 'adb connect' in Termux\n3. android-tools is installed in Termux"
+                )
+            }
         }
     }
 

@@ -156,6 +156,67 @@ object Dialogs {
             .setPositiveButton("Setup Device Owner") { _, _ -> isConfirmed(true) }
             .show()
     }
+
+    /**
+     * Show dialog with option to set Device Owner via Wireless ADB
+     */
+    fun showWirelessAdbSetupDialog(context: Context, onAction: (WirelessAdbAction) -> Unit) {
+        AlertDialog.Builder(context)
+            .setTitle("Set Device Owner via Wireless ADB")
+            .setMessage(
+                "📱 QUICK SETUP (No PC needed!)\n\n" +
+                    "Prerequisites:\n" +
+                    "1. Install Termux from F-Droid\n" +
+                    "2. In Termux, run:\n" +
+                    "   pkg install android-tools\n" +
+                    "   adb connect localhost:5037\n\n" +
+                    "Then:\n" +
+                    "• Make sure Wireless Debugging is ON\n" +
+                    "• Tap 'Set Device Owner' below\n" +
+                    "• This app will run the ADB command automatically!\n\n" +
+                    "✅ You already did this in Termux, so just tap the button!"
+            )
+            .setPositiveButton("Set Device Owner") { _, _ ->
+                onAction(WirelessAdbAction.SET_DEVICE_OWNER)
+            }
+            .setNegativeButton("Cancel") { _, _ ->
+                onAction(WirelessAdbAction.CANCEL)
+            }
+            .setNeutralButton("Full Instructions") { _, _ ->
+                onAction(WirelessAdbAction.SHOW_INSTRUCTIONS)
+            }
+            .show()
+    }
+
+    /**
+     * Show progress dialog for wireless ADB setup
+     */
+    fun showWirelessAdbProgress(context: Context): AlertDialog {
+        return AlertDialog.Builder(context)
+            .setTitle("Setting Device Owner...")
+            .setMessage("Running ADB command...\n\nPlease wait...")
+            .setCancelable(false)
+            .create()
+            .apply { show() }
+    }
+
+    /**
+     * Show result of wireless ADB setup
+     */
+    fun showWirelessAdbResult(context: Context, success: Boolean, message: String, onDismiss: () -> Unit = {}) {
+        AlertDialog.Builder(context)
+            .setTitle(if (success) "✓ Success!" else "✗ Failed")
+            .setMessage(message)
+            .setPositiveButton("OK") { _, _ -> onDismiss() }
+            .apply {
+                if (!success) {
+                    setNeutralButton("Instructions") { _, _ ->
+                        showDeviceAdminDialog(context) {}
+                    }
+                }
+            }
+            .show()
+    }
 }
 
 enum class InstallationType {
@@ -181,3 +242,10 @@ enum class SilentInstallAction {
     USE_AUTO_CLICK,
     CANCEL
 }
+
+enum class WirelessAdbAction {
+    SET_DEVICE_OWNER,
+    SHOW_INSTRUCTIONS,
+    CANCEL
+}
+
